@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/pokemon_providers.dart';
 import '../widgets/pokemon_grid.dart';
 import '../widgets/search_bar.dart';
@@ -8,48 +9,32 @@ import '../widgets/empty_state.dart';
 import '../../../../shared/widgets/loading_indicator.dart';
 import '../../../../shared/widgets/error_widget.dart';
 
-class HomeView extends ConsumerStatefulWidget {
-  final Function(int) onPokemonTap;
-
-  const HomeView({super.key, required this.onPokemonTap});
+class HomeView extends ConsumerWidget {
+  const HomeView({super.key});
 
   @override
-  ConsumerState<HomeView> createState() => _HomeViewState();
-}
-
-class _HomeViewState extends ConsumerState<HomeView> {
-  final _searchController = TextEditingController();
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final filteredPokemons = ref.watch(filteredPokemonProvider);
-    final favorites = ref.watch(favoritesProvider);
     final isLoadingMore = ref.watch(isLoadingMoreProvider);
+    final favoriteIds = ref.watch(favoritesProvider).value ?? [];
 
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.all(16),
           child: SearchInput(
-            controller: _searchController,
             onChanged: (value) {
-              ref.read(searchQueryProvider.notifier).setQuery(value);
+              ref.read(searchQueryProvider.notifier).state = value;
             },
             onClear: () {
-              ref.read(searchQueryProvider.notifier).clear();
+              ref.read(searchQueryProvider.notifier).state = '';
             },
           ),
         ),
         TypeFilterChips(
           selectedType: ref.watch(typeFilterProvider),
           onTypeSelected: (type) {
-            ref.read(typeFilterProvider.notifier).setType(type);
+            ref.read(typeFilterProvider.notifier).state = type;
           },
         ),
         const SizedBox(height: 8),
@@ -63,27 +48,16 @@ class _HomeViewState extends ConsumerState<HomeView> {
                 );
               }
 
-              return favorites.when(
-                data: (favoriteIds) => PokemonGrid(
-                  pokemons: pokemons,
-                  favoriteIds: favoriteIds,
-                  onPokemonTap: (pokemon) => widget.onPokemonTap(pokemon.id),
-                  onFavoriteToggle: (id) {
-                    ref.read(favoritesProvider.notifier).toggleFavorite(id);
-                  },
-                  onLoadMore: () {
-                    ref.read(pokemonListProvider.notifier).loadMore();
-                  },
-                  isLoading: isLoadingMore,
-                ),
-                loading: () => const LoadingIndicator(),
-                error: (e, _) => ErrorDisplay(
-                  message: e.toString(),
-                  onRetry: () => ref.invalidate(favoritesProvider),
-                ),
+              return PokemonGrid(
+                pokemons: pokemons,
+                favoriteIds: favoriteIds,
+                onPokemonTap: (pokemon) => context.push('/pokemon/${pokemon.id}'),
+                onFavoriteToggle: (id) => ref.read(favoritesProvider.notifier).toggle(id),
+                onLoadMore: () => ref.read(pokemonListProvider.notifier).loadMore(),
+                isLoading: isLoadingMore,
               );
             },
-            loading: () => const ShimmerGrid(),
+            loading: () => const LoadingIndicator(),
             error: (error, _) => ErrorDisplay(
               message: error.toString(),
               onRetry: () => ref.invalidate(pokemonListProvider),

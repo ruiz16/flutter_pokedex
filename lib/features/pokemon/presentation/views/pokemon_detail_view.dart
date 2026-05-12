@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/pokemon_providers.dart';
 import '../widgets/stat_bar.dart';
@@ -9,25 +10,21 @@ import '../../../../shared/widgets/error_widget.dart';
 
 class PokemonDetailView extends ConsumerWidget {
   final int pokemonId;
-  final VoidCallback onBack;
 
-  const PokemonDetailView({
-    super.key,
-    required this.pokemonId,
-    required this.onBack,
-  });
+  const PokemonDetailView({super.key, required this.pokemonId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final detailAsync = ref.watch(pokemonDetailProvider(pokemonId));
-    final favorites = ref.watch(favoritesProvider);
-    final historyNotifier = ref.read(historyProvider.notifier);
+    final pokemonAsync = ref.watch(pokemonDetailProvider(pokemonId));
+    final isFavorite = ref.watch(favoritesProvider).value?.contains(pokemonId) ?? false;
+
+    ref.listen(pokemonDetailProvider(pokemonId), (prev, next) {
+      next.whenData((_) => ref.read(historyProvider.notifier).add(pokemonId));
+    });
 
     return Scaffold(
-      body: detailAsync.when(
+      body: pokemonAsync.when(
         data: (pokemon) {
-          historyNotifier.addToHistory(pokemon.id);
-
           final primaryType = pokemon.types.isNotEmpty ? pokemon.types.first : null;
           final backgroundColor = primaryType != null
               ? primaryType.color.withAlpha(51)
@@ -40,7 +37,7 @@ class PokemonDetailView extends ConsumerWidget {
                 pinned: true,
                 leading: IconButton(
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: onBack,
+                  onPressed: () => context.pop(),
                 ),
                 backgroundColor: primaryType?.color ?? Theme.of(context).primaryColor,
                 flexibleSpace: FlexibleSpaceBar(
@@ -69,22 +66,14 @@ class PokemonDetailView extends ConsumerWidget {
                   ),
                 ),
                 actions: [
-                  favorites.when(
-                    data: (favoriteIds) => IconButton(
-                      icon: Icon(
-                        favoriteIds.contains(pokemon.id)
-                            ? Icons.favorite
-                            : Icons.favorite_border,
-                        color: favoriteIds.contains(pokemon.id)
-                            ? Colors.red
-                            : Colors.white,
-                      ),
-                      onPressed: () {
-                        ref.read(favoritesProvider.notifier).toggleFavorite(pokemon.id);
-                      },
+                  IconButton(
+                    icon: Icon(
+                      isFavorite ? Icons.favorite : Icons.favorite_border,
+                      color: isFavorite ? Colors.red : Colors.white,
                     ),
-                    loading: () => const SizedBox(),
-                    error: (_, _) => const SizedBox(),
+                    onPressed: () {
+                      ref.read(favoritesProvider.notifier).toggleFavorite(pokemon.id);
+                    },
                   ),
                 ],
               ),
@@ -105,8 +94,7 @@ class PokemonDetailView extends ConsumerWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              pokemon.name[0].toUpperCase() +
-                                  pokemon.name.substring(1),
+                              pokemon.name[0].toUpperCase() + pokemon.name.substring(1),
                               style: Theme.of(context).textTheme.headlineMedium,
                             ),
                             const SizedBox(height: 12),
