@@ -1,146 +1,82 @@
+// lib/features/pokemon/presentation/providers/pokemon_providers.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import '../../../../core/network/api_client.dart';
 import '../../data/datasources/pokemon_local_datasource.dart';
 import '../../data/datasources/pokemon_remote_datasource.dart';
-import '../../data/repositories/pokemon_repository_impl.dart';
-import '../../domain/entities/pokemon.dart';
-import '../../domain/entities/pokemon_detail.dart';
-import '../../domain/repositories/pokemon_repository.dart';
-import '../../domain/usecases/get_favorites.dart';
-import '../../domain/usecases/get_history.dart';
-import '../../domain/usecases/get_pokemon_detail.dart';
-import '../../domain/usecases/get_pokemon_list.dart';
-import '../../domain/usecases/toggle_favorite.dart';
-import '../../domain/usecases/add_to_history.dart';
+import '../../data/models/pokemon_model.dart';
+import '../../data/models/pokemon_detail_model.dart';
 
-final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
+// ═══════════════════════════════════════════════════════════════════
+// DEPENDENCY PROVIDERS (inline, simples)
+// ═══════════════════════════════════════════════════════════════════
+
+final sharedPrefsProvider = Provider<SharedPreferences>((ref) {
   throw UnimplementedError('SharedPreferences not initialized');
 });
 
-final apiClientProvider = Provider<ApiClient>((ref) {
-  return ApiClient();
-});
+final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
 
-final pokemonRemoteDataSourceProvider = Provider<PokemonRemoteDataSource>((ref) {
+final pokemonRemoteProvider = Provider<PokemonRemoteDataSource>((ref) {
   return PokemonRemoteDataSource(ref.read(apiClientProvider));
 });
 
-final pokemonLocalDataSourceProvider = Provider<PokemonLocalDataSource>((ref) {
-  return PokemonLocalDataSource(ref.read(sharedPreferencesProvider));
+final pokemonLocalProvider = Provider<PokemonLocalDataSource>((ref) {
+  return PokemonLocalDataSource(ref.read(sharedPrefsProvider));
 });
 
-final pokemonRepositoryProvider = Provider<PokemonRepository>((ref) {
-  return PokemonRepositoryImpl(
-    remoteDataSource: ref.read(pokemonRemoteDataSourceProvider),
-    localDataSource: ref.read(pokemonLocalDataSourceProvider),
-  );
-});
+// ═══════════════════════════════════════════════════════════════════
+// UI STATE PROVIDERS (StateProvider simplificado)
+// ═══════════════════════════════════════════════════════════════════
 
-final getPokemonListUseCaseProvider = Provider<GetPokemonList>((ref) {
-  return GetPokemonList(ref.read(pokemonRepositoryProvider));
-});
+final searchQueryProvider = StateProvider<String>((ref) => '');
 
-final getPokemonDetailUseCaseProvider = Provider<GetPokemonDetail>((ref) {
-  return GetPokemonDetail(ref.read(pokemonRepositoryProvider));
-});
+final typeFilterProvider = StateProvider<String?>((ref) => null);
 
-final toggleFavoriteUseCaseProvider = Provider<ToggleFavorite>((ref) {
-  return ToggleFavorite(ref.read(pokemonRepositoryProvider));
-});
+final isLoadingMoreProvider = StateProvider<bool>((ref) => false);
 
-final getFavoritesUseCaseProvider = Provider<GetFavorites>((ref) {
-  return GetFavorites(ref.read(pokemonRepositoryProvider));
-});
+// ═══════════════════════════════════════════════════════════════════
+// DATA PROVIDERS (AsyncNotifier - lógica de negocio)
+// ═══════════════════════════════════════════════════════════════════
 
-final addToHistoryUseCaseProvider = Provider<AddToHistory>((ref) {
-  return AddToHistory(ref.read(pokemonRepositoryProvider));
-});
-
-final getHistoryUseCaseProvider = Provider<GetHistory>((ref) {
-  return GetHistory(ref.read(pokemonRepositoryProvider));
-});
-
-final searchQueryProvider = NotifierProvider<SearchQueryNotifier, String>(
-  SearchQueryNotifier.new,
-);
-
-class SearchQueryNotifier extends Notifier<String> {
-  @override
-  String build() => '';
-
-  void setQuery(String query) => state = query;
-
-  void clear() => state = '';
-}
-
-final typeFilterProvider = NotifierProvider<TypeFilterNotifier, String?>(
-  TypeFilterNotifier.new,
-);
-
-class TypeFilterNotifier extends Notifier<String?> {
-  @override
-  String? build() => null;
-
-  void setType(String? type) => state = type;
-}
-
-final isLoadingMoreProvider = NotifierProvider<IsLoadingMoreNotifier, bool>(
-  IsLoadingMoreNotifier.new,
-);
-
-class IsLoadingMoreNotifier extends Notifier<bool> {
-  @override
-  bool build() => false;
-
-  void setLoading(bool loading) => state = loading;
-}
-
-final pokemonListProvider = AsyncNotifierProvider<PokemonListNotifier, List<Pokemon>>(
+final pokemonListProvider = AsyncNotifierProvider<PokemonListNotifier, List<PokemonModel>>(
   PokemonListNotifier.new,
 );
 
-class PokemonListNotifier extends AsyncNotifier<List<Pokemon>> {
+class PokemonListNotifier extends AsyncNotifier<List<PokemonModel>> {
   @override
-  Future<List<Pokemon>> build() async {
-    return _fetchPokemonList(0);
+  Future<List<PokemonModel>> build() async {
+    return _fetch(0);
   }
 
-  Future<List<Pokemon>> _fetchPokemonList(int offset) async {
-    final useCase = ref.read(getPokemonListUseCaseProvider);
-    final result = await useCase.call(offset, 20);
-    return result.fold(
-      (failure) => throw Exception(failure.message),
-      (pokemons) => pokemons,
-    );
+  Future<List<PokemonModel>> _fetch(int offset) async {
+    final remote = ref.read(pokemonRemoteProvider);
+    return remote.getPokemonList(offset, 20);
   }
 
   Future<void> loadMore() async {
     if (ref.read(isLoadingMoreProvider)) return;
 
-    ref.read(isLoadingMoreProvider.notifier).setLoading(true);
+    final current = state.value ?? [];
+    ref.read(isLoadingMoreProvider.notifier).state = true;
 
-    final currentList = state.value ?? [];
-    final newPokemons = await _fetchPokemonList(currentList.length);
-
-    ref.read(isLoadingMoreProvider.notifier).setLoading(false);
-    state = AsyncData([...currentList, ...newPokemons]);
+    try {
+      final newPokemons = await _fetch(current.length);
+      state = AsyncData([...current, ...newPokemons]);
+    } finally {
+      ref.read(isLoadingMoreProvider.notifier).state = false;
+    }
   }
 
   Future<void> refresh() async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() => _fetchPokemonList(0));
+    state = await AsyncValue.guard(() => _fetch(0));
   }
 }
 
-final pokemonDetailProvider = FutureProvider.family<PokemonDetail, int>((ref, id) async {
-  final useCase = ref.read(getPokemonDetailUseCaseProvider);
-  final result = await useCase.call(id);
-  return result.fold(
-    (failure) => throw Exception(failure.message),
-    (pokemon) => pokemon,
-  );
+final pokemonDetailProvider = FutureProvider.family<PokemonDetailModel, int>((ref, id) async {
+  final remote = ref.read(pokemonRemoteProvider);
+  return remote.getPokemonDetail(id);
 });
 
 final favoritesProvider = AsyncNotifierProvider<FavoritesNotifier, List<int>>(
@@ -150,17 +86,13 @@ final favoritesProvider = AsyncNotifierProvider<FavoritesNotifier, List<int>>(
 class FavoritesNotifier extends AsyncNotifier<List<int>> {
   @override
   Future<List<int>> build() async {
-    final useCase = ref.read(getFavoritesUseCaseProvider);
-    final result = await useCase.call();
-    return result.fold(
-      (failure) => throw Exception(failure.message),
-      (favorites) => favorites,
-    );
+    final local = ref.read(pokemonLocalProvider);
+    return local.getFavorites();
   }
 
-  Future<void> toggleFavorite(int id) async {
-    final useCase = ref.read(toggleFavoriteUseCaseProvider);
-    await useCase.call(id);
+  Future<void> toggle(int id) async {
+    final local = ref.read(pokemonLocalProvider);
+    await local.toggleFavorite(id);
     ref.invalidateSelf();
   }
 }
@@ -172,42 +104,59 @@ final historyProvider = AsyncNotifierProvider<HistoryNotifier, List<int>>(
 class HistoryNotifier extends AsyncNotifier<List<int>> {
   @override
   Future<List<int>> build() async {
-    final useCase = ref.read(getHistoryUseCaseProvider);
-    final result = await useCase.call();
-    return result.fold(
-      (failure) => throw Exception(failure.message),
-      (history) => history.reversed.toList(),
-    );
+    final local = ref.read(pokemonLocalProvider);
+    return (await local.getHistory()).reversed.toList();
   }
 
-  Future<void> addToHistory(int id) async {
-    final useCase = ref.read(addToHistoryUseCaseProvider);
-    await useCase.call(id);
+  Future<void> add(int id) async {
+    final local = ref.read(pokemonLocalProvider);
+    await local.addToHistory(id);
     ref.invalidateSelf();
   }
 }
 
-final filteredPokemonProvider = Provider<AsyncValue<List<Pokemon>>>((ref) {
+// ═══════════════════════════════════════════════════════════════════
+// DERIVED PROVIDER (computado)
+// ═══════════════════════════════════════════════════════════════════
+
+final filteredPokemonProvider = Provider<AsyncValue<List<PokemonModel>>>((ref) {
   final listState = ref.watch(pokemonListProvider);
-  final searchQuery = ref.watch(searchQueryProvider);
-  final typeFilter = ref.watch(typeFilterProvider);
+  final query = ref.watch(searchQueryProvider);
+  final type = ref.watch(typeFilterProvider);
 
   return listState.whenData((pokemons) {
     var filtered = pokemons;
 
-    if (searchQuery.isNotEmpty) {
-      filtered = filtered
-          .where((p) => p.name.toLowerCase().contains(searchQuery.toLowerCase()))
-          .toList();
+    if (query.isNotEmpty) {
+      filtered = filtered.where((p) => p.name.toLowerCase().contains(query.toLowerCase())).toList();
     }
 
-    if (typeFilter != null) {
-      filtered = filtered
-          .where((p) => p.types.any(
-              (t) => t.name.toLowerCase() == typeFilter.toLowerCase()))
-          .toList();
+    if (type != null) {
+      filtered = filtered.where((p) => p.types.any((t) => t.name.toLowerCase() == type.toLowerCase())).toList();
     }
 
     return filtered;
   });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// FAVORITES/HISTORY POKEMON PROVIDERS (para mostrar pokemon completo)
+// ═══════════════════════════════════════════════════════════════════
+
+final favoritePokemonsProvider = FutureProvider<List<PokemonModel>>((ref) async {
+  final favoriteIds = await ref.watch(favoritesProvider.future);
+  final list = await ref.watch(pokemonListProvider.future);
+  return list.where((p) => favoriteIds.contains(p.id)).toList();
+});
+
+final historyPokemonsProvider = FutureProvider<List<PokemonModel>>((ref) async {
+  final historyIds = await ref.watch(historyProvider.future);
+  final list = await ref.watch(pokemonListProvider.future);
+  // Maintain order from history
+  final result = <PokemonModel>[];
+  for (final id in historyIds) {
+    final pokemon = list.where((p) => p.id == id).firstOrNull;
+    if (pokemon != null) result.add(pokemon);
+  }
+  return result;
 });
