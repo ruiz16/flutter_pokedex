@@ -24,17 +24,17 @@ class HomeView extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           child: SearchInput(
             onChanged: (value) {
-              ref.read(searchQueryProvider.notifier).state = value;
+              ref.read(searchQueryProvider.notifier).setQuery(value);
             },
             onClear: () {
-              ref.read(searchQueryProvider.notifier).state = '';
+              ref.read(searchQueryProvider.notifier).setQuery('');
             },
           ),
         ),
         TypeFilterChips(
           selectedType: ref.watch(typeFilterProvider),
           onTypeSelected: (type) {
-            ref.read(typeFilterProvider.notifier).state = type;
+            ref.read(typeFilterProvider.notifier).setType(type);
           },
         ),
         const SizedBox(height: 8),
@@ -43,7 +43,8 @@ class HomeView extends ConsumerWidget {
             data: (pokemons) {
               if (pokemons.isEmpty) {
                 return const EmptyState(
-                  message: 'No Pokemon found.\nTry a different search or filter.',
+                  message:
+                      'No Pokemon found.\nTry a different search or filter.',
                   icon: Icons.search_off,
                 );
               }
@@ -51,9 +52,12 @@ class HomeView extends ConsumerWidget {
               return PokemonGrid(
                 pokemons: pokemons,
                 favoriteIds: favoriteIds,
-                onPokemonTap: (pokemon) => context.push('/pokemon/${pokemon.id}'),
-                onFavoriteToggle: (id) => ref.read(favoritesProvider.notifier).toggle(id),
-                onLoadMore: () => ref.read(pokemonListProvider.notifier).loadMore(),
+                onPokemonTap: (pokemon) =>
+                    context.push('/pokemon/${pokemon.id}'),
+                onFavoriteToggle: (id) =>
+                    ref.read(favoritesProvider.notifier).toggle(id),
+                onLoadMore: () =>
+                    ref.read(pokemonListProvider.notifier).loadMore(),
                 isLoading: isLoadingMore,
               );
             },

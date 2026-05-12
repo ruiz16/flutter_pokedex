@@ -7,7 +7,7 @@ class PokemonGrid extends StatelessWidget {
   final List<int> favoriteIds;
   final Function(Pokemon) onPokemonTap;
   final Function(int) onFavoriteToggle;
-  final VoidCallback onLoadMore;
+  final VoidCallback? onLoadMore;
   final bool isLoading;
 
   const PokemonGrid({
@@ -16,7 +16,7 @@ class PokemonGrid extends StatelessWidget {
     required this.favoriteIds,
     required this.onPokemonTap,
     required this.onFavoriteToggle,
-    required this.onLoadMore,
+    this.onLoadMore,
     this.isLoading = false,
   });
 
@@ -28,8 +28,9 @@ class PokemonGrid extends StatelessWidget {
           onNotification: (scrollInfo) {
             if (scrollInfo.metrics.pixels >=
                     scrollInfo.metrics.maxScrollExtent - 200 &&
-                !isLoading) {
-              onLoadMore();
+                !isLoading &&
+                onLoadMore != null) {
+              onLoadMore?.call();
             }
             return false;
           },
