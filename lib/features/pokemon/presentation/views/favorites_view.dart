@@ -13,8 +13,8 @@ class FavoritesView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final favorites = ref.watch(favoritesNotifierProvider);
-    final pokemonList = ref.watch(pokemonListNotifierProvider);
+    final favorites = ref.watch(favoritesProvider);
+    final pokemonList = ref.watch(pokemonListProvider);
 
     return favorites.when(
       data: (favoriteIds) {
@@ -54,9 +54,7 @@ class FavoritesView extends ConsumerWidget {
                   onTap: () => onPokemonTap(pokemon.id),
                   isFavorite: true,
                   onFavoriteToggle: () {
-                    ref
-                        .read(favoritesNotifierProvider.notifier)
-                        .toggleFavorite(pokemon.id);
+                    ref.read(favoritesProvider.notifier).toggleFavorite(pokemon.id);
                   },
                 );
               },
@@ -65,14 +63,14 @@ class FavoritesView extends ConsumerWidget {
           loading: () => const LoadingIndicator(),
           error: (e, _) => ErrorDisplay(
             message: e.toString(),
-            onRetry: () => ref.refresh(pokemonListNotifierProvider),
+            onRetry: () => ref.invalidate(pokemonListProvider),
           ),
         );
       },
       loading: () => const LoadingIndicator(),
       error: (e, _) => ErrorDisplay(
         message: e.toString(),
-        onRetry: () => ref.refresh(favoritesNotifierProvider),
+        onRetry: () => ref.invalidate(favoritesProvider),
       ),
     );
   }

@@ -12,7 +12,6 @@ import '../../domain/usecases/get_favorites.dart';
 import '../../domain/usecases/get_history.dart';
 import '../../domain/usecases/get_pokemon_detail.dart';
 import '../../domain/usecases/get_pokemon_list.dart';
-import '../../domain/usecases/search_pokemon.dart';
 import '../../domain/usecases/toggle_favorite.dart';
 import '../../domain/usecases/add_to_history.dart';
 
@@ -47,10 +46,6 @@ final getPokemonDetailUseCaseProvider = Provider<GetPokemonDetail>((ref) {
   return GetPokemonDetail(ref.read(pokemonRepositoryProvider));
 });
 
-final searchPokemonUseCaseProvider = Provider<SearchPokemon>((ref) {
-  return SearchPokemon(ref.read(pokemonRepositoryProvider));
-});
-
 final toggleFavoriteUseCaseProvider = Provider<ToggleFavorite>((ref) {
   return ToggleFavorite(ref.read(pokemonRepositoryProvider));
 });
@@ -67,14 +62,42 @@ final getHistoryUseCaseProvider = Provider<GetHistory>((ref) {
   return GetHistory(ref.read(pokemonRepositoryProvider));
 });
 
-final searchQueryProvider = StateProvider<String>((ref) => '');
+final searchQueryProvider = NotifierProvider<SearchQueryNotifier, String>(
+  SearchQueryNotifier.new,
+);
 
-final typeFilterProvider = StateProvider<String?>((ref) => null);
+class SearchQueryNotifier extends Notifier<String> {
+  @override
+  String build() => '';
 
-final isLoadingMoreProvider = StateProvider<bool>((ref) => false);
+  void setQuery(String query) => state = query;
 
-final pokemonListNotifierProvider =
-    AsyncNotifierProvider<PokemonListNotifier, List<Pokemon>>(
+  void clear() => state = '';
+}
+
+final typeFilterProvider = NotifierProvider<TypeFilterNotifier, String?>(
+  TypeFilterNotifier.new,
+);
+
+class TypeFilterNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void setType(String? type) => state = type;
+}
+
+final isLoadingMoreProvider = NotifierProvider<IsLoadingMoreNotifier, bool>(
+  IsLoadingMoreNotifier.new,
+);
+
+class IsLoadingMoreNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void setLoading(bool loading) => state = loading;
+}
+
+final pokemonListProvider = AsyncNotifierProvider<PokemonListNotifier, List<Pokemon>>(
   PokemonListNotifier.new,
 );
 
@@ -95,12 +118,13 @@ class PokemonListNotifier extends AsyncNotifier<List<Pokemon>> {
 
   Future<void> loadMore() async {
     if (ref.read(isLoadingMoreProvider)) return;
-    
-    ref.read(isLoadingMoreProvider.notifier).state = true;
 
-    final currentList = state.valueOrNull ?? [];
+    ref.read(isLoadingMoreProvider.notifier).setLoading(true);
+
+    final currentList = state.value ?? [];
     final newPokemons = await _fetchPokemonList(currentList.length);
-    ref.read(isLoadingMoreProvider.notifier).state = false;
+
+    ref.read(isLoadingMoreProvider.notifier).setLoading(false);
     state = AsyncData([...currentList, ...newPokemons]);
   }
 
@@ -110,8 +134,7 @@ class PokemonListNotifier extends AsyncNotifier<List<Pokemon>> {
   }
 }
 
-final pokemonDetailProvider =
-    FutureProvider.family<PokemonDetail, int>((ref, id) async {
+final pokemonDetailProvider = FutureProvider.family<PokemonDetail, int>((ref, id) async {
   final useCase = ref.read(getPokemonDetailUseCaseProvider);
   final result = await useCase.call(id);
   return result.fold(
@@ -120,8 +143,7 @@ final pokemonDetailProvider =
   );
 });
 
-final favoritesNotifierProvider =
-    AsyncNotifierProvider<FavoritesNotifier, List<int>>(
+final favoritesProvider = AsyncNotifierProvider<FavoritesNotifier, List<int>>(
   FavoritesNotifier.new,
 );
 
@@ -143,8 +165,7 @@ class FavoritesNotifier extends AsyncNotifier<List<int>> {
   }
 }
 
-final historyNotifierProvider =
-    AsyncNotifierProvider<HistoryNotifier, List<int>>(
+final historyProvider = AsyncNotifierProvider<HistoryNotifier, List<int>>(
   HistoryNotifier.new,
 );
 
@@ -167,7 +188,7 @@ class HistoryNotifier extends AsyncNotifier<List<int>> {
 }
 
 final filteredPokemonProvider = Provider<AsyncValue<List<Pokemon>>>((ref) {
-  final listState = ref.watch(pokemonListNotifierProvider);
+  final listState = ref.watch(pokemonListProvider);
   final searchQuery = ref.watch(searchQueryProvider);
   final typeFilter = ref.watch(typeFilterProvider);
 

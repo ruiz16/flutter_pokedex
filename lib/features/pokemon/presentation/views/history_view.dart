@@ -13,8 +13,8 @@ class HistoryView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final history = ref.watch(historyNotifierProvider);
-    final pokemonList = ref.watch(pokemonListNotifierProvider);
+    final history = ref.watch(historyProvider);
+    final pokemonList = ref.watch(pokemonListProvider);
 
     return history.when(
       data: (historyIds) {
@@ -60,14 +60,14 @@ class HistoryView extends ConsumerWidget {
           loading: () => const LoadingIndicator(),
           error: (e, _) => ErrorDisplay(
             message: e.toString(),
-            onRetry: () => ref.refresh(pokemonListNotifierProvider),
+            onRetry: () => ref.invalidate(pokemonListProvider),
           ),
         );
       },
       loading: () => const LoadingIndicator(),
       error: (e, _) => ErrorDisplay(
         message: e.toString(),
-        onRetry: () => ref.refresh(historyNotifierProvider),
+        onRetry: () => ref.invalidate(historyProvider),
       ),
     );
   }

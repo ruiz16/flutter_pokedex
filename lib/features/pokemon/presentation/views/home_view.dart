@@ -29,7 +29,7 @@ class _HomeViewState extends ConsumerState<HomeView> {
   @override
   Widget build(BuildContext context) {
     final filteredPokemons = ref.watch(filteredPokemonProvider);
-    final favorites = ref.watch(favoritesNotifierProvider);
+    final favorites = ref.watch(favoritesProvider);
     final isLoadingMore = ref.watch(isLoadingMoreProvider);
 
     return Column(
@@ -39,17 +39,17 @@ class _HomeViewState extends ConsumerState<HomeView> {
           child: SearchInput(
             controller: _searchController,
             onChanged: (value) {
-              ref.read(searchQueryProvider.notifier).state = value;
+              ref.read(searchQueryProvider.notifier).setQuery(value);
             },
             onClear: () {
-              ref.read(searchQueryProvider.notifier).state = '';
+              ref.read(searchQueryProvider.notifier).clear();
             },
           ),
         ),
         TypeFilterChips(
           selectedType: ref.watch(typeFilterProvider),
           onTypeSelected: (type) {
-            ref.read(typeFilterProvider.notifier).state = type;
+            ref.read(typeFilterProvider.notifier).setType(type);
           },
         ),
         const SizedBox(height: 8),
@@ -69,24 +69,24 @@ class _HomeViewState extends ConsumerState<HomeView> {
                   favoriteIds: favoriteIds,
                   onPokemonTap: (pokemon) => widget.onPokemonTap(pokemon.id),
                   onFavoriteToggle: (id) {
-                    ref.read(favoritesNotifierProvider.notifier).toggleFavorite(id);
+                    ref.read(favoritesProvider.notifier).toggleFavorite(id);
                   },
                   onLoadMore: () {
-                    ref.read(pokemonListNotifierProvider.notifier).loadMore();
+                    ref.read(pokemonListProvider.notifier).loadMore();
                   },
                   isLoading: isLoadingMore,
                 ),
                 loading: () => const LoadingIndicator(),
                 error: (e, _) => ErrorDisplay(
                   message: e.toString(),
-                  onRetry: () => ref.refresh(favoritesNotifierProvider),
+                  onRetry: () => ref.invalidate(favoritesProvider),
                 ),
               );
             },
             loading: () => const ShimmerGrid(),
             error: (error, _) => ErrorDisplay(
               message: error.toString(),
-              onRetry: () => ref.refresh(pokemonListNotifierProvider),
+              onRetry: () => ref.invalidate(pokemonListProvider),
             ),
           ),
         ),

@@ -20,13 +20,13 @@ class PokemonDetailView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detailAsync = ref.watch(pokemonDetailProvider(pokemonId));
-    final favorites = ref.watch(favoritesNotifierProvider);
-    final history = ref.read(historyNotifierProvider.notifier);
+    final favorites = ref.watch(favoritesProvider);
+    final historyNotifier = ref.read(historyProvider.notifier);
 
     return Scaffold(
       body: detailAsync.when(
         data: (pokemon) {
-          history.addToHistory(pokemon.id);
+          historyNotifier.addToHistory(pokemon.id);
 
           final primaryType = pokemon.types.isNotEmpty ? pokemon.types.first : null;
           final backgroundColor = primaryType != null
@@ -80,9 +80,7 @@ class PokemonDetailView extends ConsumerWidget {
                             : Colors.white,
                       ),
                       onPressed: () {
-                        ref
-                            .read(favoritesNotifierProvider.notifier)
-                            .toggleFavorite(pokemon.id);
+                        ref.read(favoritesProvider.notifier).toggleFavorite(pokemon.id);
                       },
                     ),
                     loading: () => const SizedBox(),
@@ -181,7 +179,7 @@ class PokemonDetailView extends ConsumerWidget {
         loading: () => const LoadingIndicator(message: 'Loading Pokemon details...'),
         error: (error, _) => ErrorDisplay(
           message: error.toString(),
-          onRetry: () => ref.refresh(pokemonDetailProvider(pokemonId)),
+          onRetry: () => ref.invalidate(pokemonDetailProvider(pokemonId)),
         ),
       ),
     );
