@@ -165,31 +165,52 @@ class FilteredPokemonNotifier extends AsyncNotifier<List<PokemonModel>> {
     final typeFilter = ref.watch(typeFilterProvider);
     final query = ref.watch(searchQueryProvider).toLowerCase();
 
+    // Primero buscar en local
+    final localPokemons = await ref.watch(pokemonListProvider.future);
+
+    // Si hay filtro de tipo: SIEMPRE buscar en API (no en local)
     if (typeFilter != null) {
-      // Con filtro: buscar en API con paginación
       final remote = ref.read(pokemonRemoteProvider);
-      var pokemons = await remote.getPokemonByType(
+      var apiPokemons = await remote.getPokemonByType(
         typeFilter.toLowerCase(),
         offset: offset,
         limit: 20,
       );
 
-      // Filtrar por query localmente
+      // Filtrar por query si existe
       if (query.isNotEmpty) {
-        pokemons = pokemons
+        apiPokemons = apiPokemons
             .where((p) => p.name.toLowerCase().contains(query))
             .toList();
       }
 
-      return pokemons;
-    } else {
-      // Sin filtro: usar lista local (ya tiene loadMore)
-      final pokemons = await ref.watch(pokemonListProvider.future);
-      if (query.isEmpty) return pokemons;
-      return pokemons
+      return apiPokemons;
+    }
+
+    // Sin filtro de tipo: buscar en local por nombre
+    if (query.isNotEmpty) {
+      // Buscar en local
+      final localFiltered = localPokemons
           .where((p) => p.name.toLowerCase().contains(query))
           .toList();
+
+      if (localFiltered.isNotEmpty) {
+        return localFiltered;
+      }
+
+      // Si no está en local, buscar en API por nombre
+      try {
+        final remote = ref.read(pokemonRemoteProvider);
+        final detail = await remote.getPokemonByName(query);
+        return [PokemonModel.fromDetail(detail)];
+      } catch (e) {
+        // Si no existe en API, retornar lista vacía
+        return [];
+      }
     }
+
+    // Sin query y sin filtro: retornar lista local
+    return localPokemons;
   }
 
   Future<void> loadMore() async {

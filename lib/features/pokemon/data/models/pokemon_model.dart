@@ -1,5 +1,6 @@
 import '../../domain/entities/pokemon.dart';
 import '../../domain/entities/pokemon_type.dart';
+import 'pokemon_detail_model.dart';
 
 class PokemonModel extends Pokemon {
   const PokemonModel({
@@ -12,10 +13,7 @@ class PokemonModel extends Pokemon {
   factory PokemonModel.fromJson(Map<String, dynamic> json) {
     final types = (json['types'] as List).map((typeData) {
       final typeName = typeData['type']['name'] as String;
-      return PokemonType(
-        name: typeName,
-        color: PokemonType.getColor(typeName),
-      );
+      return PokemonType(name: typeName, color: PokemonType.getColor(typeName));
     }).toList();
 
     final id = json['id'] as int;
@@ -30,12 +28,23 @@ class PokemonModel extends Pokemon {
     );
   }
 
+  factory PokemonModel.fromDetail(PokemonDetailModel detail) {
+    return PokemonModel(
+      id: detail.id,
+      name: detail.name,
+      imageUrl: detail.imageUrl,
+      types: detail.types,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'name': name,
       'imageUrl': imageUrl,
-      'types': types.map((t) => {'name': t.name, 'color': t.color.toARGB32()}).toList(),
+      'types': types
+          .map((t) => {'name': t.name, 'color': t.color.toARGB32()})
+          .toList(),
     };
   }
 }
