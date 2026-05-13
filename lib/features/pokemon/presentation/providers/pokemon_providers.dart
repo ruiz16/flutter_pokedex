@@ -184,7 +184,7 @@ class FilteredPokemonNotifier extends AsyncNotifier<List<PokemonModel>> {
       return pokemons;
     } else {
       // Sin filtro: usar lista local (ya tiene loadMore)
-      final pokemons = ref.read(pokemonListProvider).value ?? [];
+      final pokemons = await ref.watch(pokemonListProvider.future);
       if (query.isEmpty) return pokemons;
       return pokemons
           .where((p) => p.name.toLowerCase().contains(query))
