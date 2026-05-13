@@ -19,7 +19,9 @@ class PokemonRemoteDataSource {
     for (int i = 0; i < results.length; i++) {
       final url = results[i]['url'] as String;
       final id = int.parse(url.split('/').where((s) => s.isNotEmpty).last);
-      final detailResponse = await apiClient.get<Map<String, dynamic>>('/pokemon/$id');
+      final detailResponse = await apiClient.get<Map<String, dynamic>>(
+        '/pokemon/$id',
+      );
       pokemons.add(PokemonModel.fromJson(detailResponse.data!));
     }
 
@@ -32,7 +34,31 @@ class PokemonRemoteDataSource {
   }
 
   Future<PokemonDetailModel> getPokemonByName(String name) async {
-    final response = await apiClient.get<Map<String, dynamic>>('/pokemon/$name');
+    final response = await apiClient.get<Map<String, dynamic>>(
+      '/pokemon/$name',
+    );
     return PokemonDetailModel.fromJson(response.data!);
+  }
+
+  Future<List<PokemonModel>> getPokemonByType(
+    String type, {
+    int limit = 20,
+  }) async {
+    final response = await apiClient.get<Map<String, dynamic>>('/type/$type');
+    final pokemonList = response.data!['pokemon'] as List;
+
+    final List<PokemonModel> pokemons = [];
+    final limitedList = pokemonList.take(limit).toList();
+
+    for (final entry in limitedList) {
+      final url = entry['pokemon']['url'] as String;
+      final id = int.parse(url.split('/').where((s) => s.isNotEmpty).last);
+      final detailResponse = await apiClient.get<Map<String, dynamic>>(
+        '/pokemon/$id',
+      );
+      pokemons.add(PokemonModel.fromJson(detailResponse.data!));
+    }
+
+    return pokemons;
   }
 }

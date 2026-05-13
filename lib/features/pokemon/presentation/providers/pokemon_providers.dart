@@ -150,31 +150,35 @@ class HistoryNotifier extends AsyncNotifier<List<int>> {
 // DERIVED PROVIDER (computado)
 // ═══════════════════════════════════════════════════════════════════
 
-final filteredPokemonProvider = Provider<AsyncValue<List<PokemonModel>>>((ref) {
-  final listState = ref.watch(pokemonListProvider);
-  final query = ref.watch(searchQueryProvider);
-  final type = ref.watch(typeFilterProvider);
+// Cuando hay filtro de tipo, buscar en API
+// Cuando no hay filtro, filtrar la lista local
+final filteredPokemonProvider = FutureProvider<List<PokemonModel>>((ref) async {
+  final typeFilter = ref.watch(typeFilterProvider);
+  final query = ref.watch(searchQueryProvider).toLowerCase();
 
-  return listState.whenData((pokemons) {
-    var filtered = pokemons;
+  // Con filtro de tipo: buscar TODOS en API (ignorar lista local)
+  if (typeFilter != null) {
+    final remote = ref.read(pokemonRemoteProvider);
+    var pokemons = await remote.getPokemonByType(typeFilter.toLowerCase());
 
+    // Filtrar por query si existe
     if (query.isNotEmpty) {
-      filtered = filtered
-          .where((p) => p.name.toLowerCase().contains(query.toLowerCase()))
+      pokemons = pokemons
+          .where((p) => p.name.toLowerCase().contains(query))
           .toList();
     }
 
-    if (type != null) {
-      filtered = filtered
-          .where(
-            (p) =>
-                p.types.any((t) => t.name.toLowerCase() == type.toLowerCase()),
-          )
-          .toList();
-    }
+    return pokemons;
+  }
 
-    return filtered;
-  });
+  // Sin filtro de tipo: filtrar lista local
+  final pokemons = ref.read(pokemonListProvider).value ?? [];
+
+  if (query.isEmpty) {
+    return pokemons;
+  }
+
+  return pokemons.where((p) => p.name.toLowerCase().contains(query)).toList();
 });
 
 // ═══════════════════════════════════════════════════════════════════

@@ -17,6 +17,7 @@ class HomeView extends ConsumerWidget {
     final filteredPokemons = ref.watch(filteredPokemonProvider);
     final isLoadingMore = ref.watch(isLoadingMoreProvider);
     final favoriteIds = ref.watch(favoritesProvider).value ?? [];
+    final hasTypeFilter = ref.watch(typeFilterProvider) != null;
 
     return Column(
       children: [
@@ -56,15 +57,16 @@ class HomeView extends ConsumerWidget {
                     context.push('/pokemon/${pokemon.id}'),
                 onFavoriteToggle: (id) =>
                     ref.read(favoritesProvider.notifier).toggle(id),
-                onLoadMore: () =>
-                    ref.read(pokemonListProvider.notifier).loadMore(),
-                isLoading: isLoadingMore,
+                onLoadMore: hasTypeFilter
+                    ? null
+                    : () => ref.read(pokemonListProvider.notifier).loadMore(),
+                isLoading: hasTypeFilter ? false : isLoadingMore,
               );
             },
             loading: () => const LoadingIndicator(),
             error: (error, _) => ErrorDisplay(
               message: error.toString(),
-              onRetry: () => ref.invalidate(pokemonListProvider),
+              onRetry: () => ref.invalidate(filteredPokemonProvider),
             ),
           ),
         ),

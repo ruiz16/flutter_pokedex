@@ -37,7 +37,7 @@ class PokemonGrid extends StatelessWidget {
           child: GridView.builder(
             padding: const EdgeInsets.fromLTRB(8, 8, 8, 60),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
+              crossAxisCount: 6,
               childAspectRatio: 0.75,
               crossAxisSpacing: 8,
               mainAxisSpacing: 8,
