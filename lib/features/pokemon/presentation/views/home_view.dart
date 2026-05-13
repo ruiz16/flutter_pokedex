@@ -58,9 +58,10 @@ class HomeView extends ConsumerWidget {
                 onFavoriteToggle: (id) =>
                     ref.read(favoritesProvider.notifier).toggle(id),
                 onLoadMore: hasTypeFilter
-                    ? null
+                    ? () =>
+                          ref.read(filteredPokemonProvider.notifier).loadMore()
                     : () => ref.read(pokemonListProvider.notifier).loadMore(),
-                isLoading: hasTypeFilter ? false : isLoadingMore,
+                isLoading: isLoadingMore,
               );
             },
             loading: () => const LoadingIndicator(),

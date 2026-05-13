@@ -42,15 +42,16 @@ class PokemonRemoteDataSource {
 
   Future<List<PokemonModel>> getPokemonByType(
     String type, {
+    int offset = 0,
     int limit = 20,
   }) async {
     final response = await apiClient.get<Map<String, dynamic>>('/type/$type');
     final pokemonList = response.data!['pokemon'] as List;
 
     final List<PokemonModel> pokemons = [];
-    final limitedList = pokemonList.take(limit).toList();
+    final paginatedList = pokemonList.skip(offset).take(limit).toList();
 
-    for (final entry in limitedList) {
+    for (final entry in paginatedList) {
       final url = entry['pokemon']['url'] as String;
       final id = int.parse(url.split('/').where((s) => s.isNotEmpty).last);
       final detailResponse = await apiClient.get<Map<String, dynamic>>(

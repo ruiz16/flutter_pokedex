@@ -147,39 +147,82 @@ class HistoryNotifier extends AsyncNotifier<List<int>> {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// DERIVED PROVIDER (computado)
+// FILTERED POKEMON PROVIDER (con paginación)
 // ═══════════════════════════════════════════════════════════════════
 
-// Cuando hay filtro de tipo, buscar en API
-// Cuando no hay filtro, filtrar la lista local
-final filteredPokemonProvider = FutureProvider<List<PokemonModel>>((ref) async {
-  final typeFilter = ref.watch(typeFilterProvider);
-  final query = ref.watch(searchQueryProvider).toLowerCase();
+final filteredPokemonProvider =
+    AsyncNotifierProvider<FilteredPokemonNotifier, List<PokemonModel>>(
+      FilteredPokemonNotifier.new,
+    );
 
-  // Con filtro de tipo: buscar TODOS en API (ignorar lista local)
-  if (typeFilter != null) {
-    final remote = ref.read(pokemonRemoteProvider);
-    var pokemons = await remote.getPokemonByType(typeFilter.toLowerCase());
+class FilteredPokemonNotifier extends AsyncNotifier<List<PokemonModel>> {
+  @override
+  Future<List<PokemonModel>> build() async {
+    return _fetch(0);
+  }
 
-    // Filtrar por query si existe
-    if (query.isNotEmpty) {
-      pokemons = pokemons
+  Future<List<PokemonModel>> _fetch(int offset) async {
+    final typeFilter = ref.watch(typeFilterProvider);
+    final query = ref.watch(searchQueryProvider).toLowerCase();
+
+    if (typeFilter != null) {
+      // Con filtro: buscar en API con paginación
+      final remote = ref.read(pokemonRemoteProvider);
+      var pokemons = await remote.getPokemonByType(
+        typeFilter.toLowerCase(),
+        offset: offset,
+        limit: 20,
+      );
+
+      // Filtrar por query localmente
+      if (query.isNotEmpty) {
+        pokemons = pokemons
+            .where((p) => p.name.toLowerCase().contains(query))
+            .toList();
+      }
+
+      return pokemons;
+    } else {
+      // Sin filtro: usar lista local (ya tiene loadMore)
+      final pokemons = ref.read(pokemonListProvider).value ?? [];
+      if (query.isEmpty) return pokemons;
+      return pokemons
           .where((p) => p.name.toLowerCase().contains(query))
           .toList();
     }
-
-    return pokemons;
   }
 
-  // Sin filtro de tipo: filtrar lista local
-  final pokemons = ref.read(pokemonListProvider).value ?? [];
+  Future<void> loadMore() async {
+    final typeFilter = ref.watch(typeFilterProvider);
+    if (typeFilter == null) {
+      // Sin filtro, delegar al provider principal
+      await ref.read(pokemonListProvider.notifier).loadMore();
+      return;
+    }
 
-  if (query.isEmpty) {
-    return pokemons;
+    if (ref.read(isLoadingMoreProvider)) return;
+
+    final current = state.value ?? [];
+    ref.read(isLoadingMoreProvider.notifier).setLoading(true);
+
+    try {
+      final newPokemons = await _fetch(current.length);
+      // Agregar solo los nuevos (evitar duplicados si la API devuelve overlaps)
+      final existingIds = current.map((p) => p.id).toSet();
+      final uniqueNew = newPokemons
+          .where((p) => !existingIds.contains(p.id))
+          .toList();
+      state = AsyncData([...current, ...uniqueNew]);
+    } finally {
+      ref.read(isLoadingMoreProvider.notifier).setLoading(false);
+    }
   }
 
-  return pokemons.where((p) => p.name.toLowerCase().contains(query)).toList();
-});
+  Future<void> refresh() async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() => _fetch(0));
+  }
+}
 
 // ═══════════════════════════════════════════════════════════════════
 // FAVORITES/HISTORY POKEMON PROVIDERS (para mostrar pokemon completo)
