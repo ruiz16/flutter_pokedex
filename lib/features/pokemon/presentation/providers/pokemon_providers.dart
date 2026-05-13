@@ -110,23 +110,26 @@ final pokemonDetailProvider = FutureProvider.family<PokemonDetailModel, int>((
   return remote.getPokemonDetail(id);
 });
 
-final favoritesProvider = AsyncNotifierProvider<FavoritesNotifier, List<int>>(
-  FavoritesNotifier.new,
-);
+final favoritesProvider = StreamProvider<List<int>>((ref) {
+  final local = ref.read(pokemonLocalProvider);
 
-class FavoritesNotifier extends AsyncNotifier<List<int>> {
-  @override
-  Future<List<int>> build() async {
-    final local = ref.read(pokemonLocalProvider);
-    return local.getFavorites();
-  }
+  // Opcional: asegurarnos de limpiar el stream si el provider se destruye
+  ref.onDispose(() {
+    // Si tuviéramos lógica extra de limpieza iría aquí
+  });
 
-  Future<void> toggle(int id) async {
+  return local.favoritesStream;
+});
+
+// Nota: Como favoritesProvider ahora es un StreamProvider de solo lectura,
+// la acción de agregar/quitar favoritos la podemos poner en un provider simple
+// o acceder directamente al localDataSource. Para mantener la interfaz limpia:
+final toggleFavoriteProvider = Provider<Future<void> Function(int)>((ref) {
+  return (int id) async {
     final local = ref.read(pokemonLocalProvider);
     await local.toggleFavorite(id);
-    ref.invalidateSelf();
-  }
-}
+  };
+});
 
 final historyProvider = AsyncNotifierProvider<HistoryNotifier, List<int>>(
   HistoryNotifier.new,

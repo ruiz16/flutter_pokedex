@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PokemonLocalDataSource {
@@ -6,8 +7,22 @@ class PokemonLocalDataSource {
   static const int _maxHistoryItems = 20;
 
   final SharedPreferences sharedPreferences;
+  
+  // 1. Creamos un StreamController para emitir listas de enteros (IDs)
+  final _favoritesStreamController = StreamController<List<int>>.broadcast();
 
-  PokemonLocalDataSource(this.sharedPreferences);
+  PokemonLocalDataSource(this.sharedPreferences) {
+    // 2. Al inicializar, emitimos el valor inicial al Stream
+    getFavorites().then((favs) => _favoritesStreamController.add(favs));
+  }
+
+  // 3. Exponemos el Stream para que otros puedan escucharlo
+  Stream<List<int>> get favoritesStream => _favoritesStreamController.stream;
+
+  // 4. Limpiamos el controlador cuando ya no se necesite (buena práctica)
+  void dispose() {
+    _favoritesStreamController.close();
+  }
 
   Future<List<int>> getFavorites() async {
     final favorites = sharedPreferences.getStringList(_favoritesKey) ?? [];
@@ -19,6 +34,8 @@ class PokemonLocalDataSource {
       _favoritesKey,
       favorites.map((e) => e.toString()).toList(),
     );
+    // 5. Cada vez que guardamos, emitimos la nueva lista al Stream
+    _favoritesStreamController.add(favorites);
   }
 
   Future<List<int>> getHistory() async {

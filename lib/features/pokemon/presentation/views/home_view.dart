@@ -55,8 +55,7 @@ class HomeView extends ConsumerWidget {
                 favoriteIds: favoriteIds,
                 onPokemonTap: (pokemon) =>
                     context.push('/pokemon/${pokemon.id}'),
-                onFavoriteToggle: (id) =>
-                    ref.read(favoritesProvider.notifier).toggle(id),
+                onFavoriteToggle: (id) => ref.read(toggleFavoriteProvider)(id),
                 onLoadMore: hasTypeFilter
                     ? () =>
                           ref.read(filteredPokemonProvider.notifier).loadMore()

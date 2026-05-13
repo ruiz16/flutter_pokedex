@@ -18,7 +18,8 @@ class FavoritesView extends ConsumerWidget {
       data: (pokemons) {
         if (pokemons.isEmpty) {
           return const EmptyState(
-            message: 'No favorites yet.\nStart adding Pokemon to your favorites!',
+            message:
+                'No favorites yet.\nStart adding Pokemon to your favorites!',
             icon: Icons.favorite_outline,
           );
         }
@@ -27,13 +28,13 @@ class FavoritesView extends ConsumerWidget {
           pokemons: pokemons,
           favoriteIds: pokemons.map((p) => p.id).toList(),
           onPokemonTap: (pokemon) => context.push('/pokemon/${pokemon.id}'),
-          onFavoriteToggle: (id) => ref.read(favoritesProvider.notifier).toggle(id),
+          onFavoriteToggle: (id) => ref.read(toggleFavoriteProvider)(id),
         );
       },
       loading: () => const LoadingIndicator(),
       error: (error, _) => ErrorDisplay(
         message: error.toString(),
-        onRetry: () => ref.invalidate(favoritesProvider),
+        onRetry: () => ref.invalidate(favoritePokemonsProvider),
       ),
     );
   }

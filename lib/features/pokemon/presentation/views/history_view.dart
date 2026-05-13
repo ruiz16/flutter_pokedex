@@ -29,7 +29,7 @@ class HistoryView extends ConsumerWidget {
           pokemons: pokemons,
           favoriteIds: favoriteIds,
           onPokemonTap: (pokemon) => context.push('/pokemon/${pokemon.id}'),
-          onFavoriteToggle: (id) => ref.read(favoritesProvider.notifier).toggle(id),
+          onFavoriteToggle: (id) => ref.read(toggleFavoriteProvider)(id),
         );
       },
       loading: () => const LoadingIndicator(),

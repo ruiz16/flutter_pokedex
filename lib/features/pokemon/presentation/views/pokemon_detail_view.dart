@@ -72,8 +72,8 @@ class PokemonDetailView extends ConsumerWidget {
                       color: isFavorite ? Colors.red : Colors.white,
                     ),
                     onPressed: () {
-                      ref.read(favoritesProvider.notifier).toggle(pokemon.id);
-                    },
+                    ref.read(toggleFavoriteProvider)(pokemon.id);
+                  },
                   ),
                 ],
               ),
