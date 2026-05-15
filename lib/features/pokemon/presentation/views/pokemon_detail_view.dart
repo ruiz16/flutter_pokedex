@@ -18,10 +18,6 @@ class PokemonDetailView extends ConsumerWidget {
     final pokemonAsync = ref.watch(pokemonDetailProvider(pokemonId));
     final isFavorite = ref.watch(favoritesProvider).contains(pokemonId);
 
-    ref.listen(pokemonDetailProvider(pokemonId), (prev, next) {
-      next.whenData((_) => ref.read(historyProvider).add(pokemonId));
-    });
-
     return Scaffold(
       body: pokemonAsync.when(
         data: (pokemon) {
@@ -56,14 +52,12 @@ class PokemonDetailView extends ConsumerWidget {
                         ],
                       ),
                     ),
-                    child: SafeArea(
-                      child: Hero(
-                        tag: 'pokemon-${pokemon.id}',
-                        child: CachedNetworkImage(
-                          imageUrl: pokemon.imageUrl,
-                          fit: BoxFit.contain,
-                          height: 250,
-                        ),
+                    child: Hero(
+                      tag: 'pokemon-${pokemon.id}',
+                      child: CachedNetworkImage(
+                        imageUrl: pokemon.imageUrl,
+                        fit: BoxFit.contain,
+                        height: 250,
                       ),
                     ),
                   ),

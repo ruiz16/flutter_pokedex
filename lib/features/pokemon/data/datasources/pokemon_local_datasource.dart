@@ -3,7 +3,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 class PokemonLocalDataSource {
   static const String _favoritesKey = 'favorites';
   static const String _historyKey = 'history';
-  static const int _maxHistoryItems = 20;
 
   final SharedPreferences sharedPreferences;
   PokemonLocalDataSource(this.sharedPreferences);
@@ -26,9 +25,6 @@ class PokemonLocalDataSource {
   }
 
   void setHistory(List<int> history) {
-    if (history.length > _maxHistoryItems) {
-      history = history.sublist(history.length - _maxHistoryItems);
-    }
     sharedPreferences.setStringList(
       _historyKey,
       history.map((e) => e.toString()).toList(),

@@ -130,10 +130,9 @@ final favoritesProvider = NotifierProvider<FavoritesNotifier, List<int>>(
   FavoritesNotifier.new,
 );
 
-final historyProvider = Provider((ref) {
-  final local = ref.read(pokemonLocalProvider);
-  return local.getHistory().reversed.toList();
-});
+final historyProvider = NotifierProvider<HistoryNotifier, List<int>>(
+  HistoryNotifier.new,
+);
 
 class HistoryNotifier extends Notifier<List<int>> {
   @override

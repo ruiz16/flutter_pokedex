@@ -53,8 +53,10 @@ class HomeView extends ConsumerWidget {
               return PokemonGrid(
                 pokemons: pokemons,
                 favoriteIds: favoriteIds,
-                onPokemonTap: (pokemon) =>
-                    context.push('/pokemon/${pokemon.id}'),
+                onPokemonTap: (pokemon) {
+                  ref.read(historyProvider.notifier).add(pokemon.id);
+                  return context.push('/pokemon/${pokemon.id}');
+                },
                 onFavoriteToggle: (id) =>
                     ref.read(favoritesProvider.notifier).toggleFavorite(id),
                 onLoadMore: hasTypeFilter
