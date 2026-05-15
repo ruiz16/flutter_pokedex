@@ -110,42 +110,42 @@ final pokemonDetailProvider = FutureProvider.family<PokemonDetailModel, int>((
   return remote.getPokemonDetail(id);
 });
 
-final favoritesProvider = StreamProvider<List<int>>((ref) {
-  final local = ref.read(pokemonLocalProvider);
-
-  // Opcional: asegurarnos de limpiar el stream si el provider se destruye
-  ref.onDispose(() {
-    // Si tuviéramos lógica extra de limpieza iría aquí
-  });
-
-  return local.favoritesStream;
-});
-
-// Nota: Como favoritesProvider ahora es un StreamProvider de solo lectura,
-// la acción de agregar/quitar favoritos la podemos poner en un provider simple
-// o acceder directamente al localDataSource. Para mantener la interfaz limpia:
-final toggleFavoriteProvider = Provider<Future<void> Function(int)>((ref) {
-  return (int id) async {
-    final local = ref.read(pokemonLocalProvider);
-    await local.toggleFavorite(id);
-  };
-});
-
-final historyProvider = AsyncNotifierProvider<HistoryNotifier, List<int>>(
-  HistoryNotifier.new,
-);
-
-class HistoryNotifier extends AsyncNotifier<List<int>> {
+class FavoritesNotifier extends Notifier<List<int>> {
   @override
-  Future<List<int>> build() async {
+  List<int> build() {
     final local = ref.read(pokemonLocalProvider);
-    return (await local.getHistory()).reversed.toList();
+    return local.getFavorites();
   }
 
-  Future<void> add(int id) async {
+  void toggleFavorite(int id) {
     final local = ref.read(pokemonLocalProvider);
-    await local.addToHistory(id);
-    ref.invalidateSelf();
+    List<int> favorites = [...state];
+    favorites.contains(id) ? favorites.remove(id) : favorites.add(id);
+    local.setFavorites(favorites);
+    state = favorites;
+  }
+}
+
+final favoritesProvider = NotifierProvider<FavoritesNotifier, List<int>>(
+  FavoritesNotifier.new,
+);
+
+final historyProvider = Provider((ref) {
+  final local = ref.read(pokemonLocalProvider);
+  return local.getHistory().reversed.toList();
+});
+
+class HistoryNotifier extends Notifier<List<int>> {
+  @override
+  List<int> build() {
+    final local = ref.read(pokemonLocalProvider);
+    return local.getHistory().reversed.toList();
+  }
+
+  void add(int id) {
+    final local = ref.read(pokemonLocalProvider);
+    local.addToHistory(id);
+    state = [...state, id];
   }
 }
 
@@ -255,13 +255,13 @@ class FilteredPokemonNotifier extends AsyncNotifier<List<PokemonModel>> {
 final favoritePokemonsProvider = FutureProvider<List<PokemonModel>>((
   ref,
 ) async {
-  final favoriteIds = await ref.watch(favoritesProvider.future);
+  final favoriteIds = ref.watch(favoritesProvider);
   final list = await ref.watch(pokemonListProvider.future);
   return list.where((p) => favoriteIds.contains(p.id)).toList();
 });
 
 final historyPokemonsProvider = FutureProvider<List<PokemonModel>>((ref) async {
-  final historyIds = await ref.watch(historyProvider.future);
+  final historyIds = ref.watch(historyProvider);
   final list = await ref.watch(pokemonListProvider.future);
   // Maintain order from history
   final result = <PokemonModel>[];

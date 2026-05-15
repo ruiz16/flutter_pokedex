@@ -28,13 +28,14 @@ class FavoritesView extends ConsumerWidget {
           pokemons: pokemons,
           favoriteIds: pokemons.map((p) => p.id).toList(),
           onPokemonTap: (pokemon) => context.push('/pokemon/${pokemon.id}'),
-          onFavoriteToggle: (id) => ref.read(toggleFavoriteProvider)(id),
+          onFavoriteToggle: (id) =>
+              ref.read(favoritesProvider.notifier).toggleFavorite(id),
         );
       },
       loading: () => const LoadingIndicator(),
       error: (error, _) => ErrorDisplay(
         message: error.toString(),
-        onRetry: () => ref.invalidate(favoritePokemonsProvider),
+        onRetry: () => ref.invalidate(favoritesProvider),
       ),
     );
   }

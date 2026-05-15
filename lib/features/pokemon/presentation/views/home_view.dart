@@ -16,7 +16,7 @@ class HomeView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final filteredPokemons = ref.watch(filteredPokemonProvider);
     final isLoadingMore = ref.watch(isLoadingMoreProvider);
-    final favoriteIds = ref.watch(favoritesProvider).value ?? [];
+    final favoriteIds = ref.watch(favoritesProvider);
     final hasTypeFilter = ref.watch(typeFilterProvider) != null;
 
     return Column(
@@ -55,7 +55,8 @@ class HomeView extends ConsumerWidget {
                 favoriteIds: favoriteIds,
                 onPokemonTap: (pokemon) =>
                     context.push('/pokemon/${pokemon.id}'),
-                onFavoriteToggle: (id) => ref.read(toggleFavoriteProvider)(id),
+                onFavoriteToggle: (id) =>
+                    ref.read(favoritesProvider.notifier).toggleFavorite(id),
                 onLoadMore: hasTypeFilter
                     ? () =>
                           ref.read(filteredPokemonProvider.notifier).loadMore()

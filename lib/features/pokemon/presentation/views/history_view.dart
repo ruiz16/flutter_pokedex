@@ -23,13 +23,14 @@ class HistoryView extends ConsumerWidget {
           );
         }
 
-        final favoriteIds = ref.watch(favoritesProvider).value ?? [];
+        final favoriteIds = ref.watch(favoritesProvider);
 
         return PokemonGrid(
           pokemons: pokemons,
           favoriteIds: favoriteIds,
           onPokemonTap: (pokemon) => context.push('/pokemon/${pokemon.id}'),
-          onFavoriteToggle: (id) => ref.read(toggleFavoriteProvider)(id),
+          onFavoriteToggle: (id) =>
+              ref.read(favoritesProvider.notifier).toggleFavorite(id),
         );
       },
       loading: () => const LoadingIndicator(),

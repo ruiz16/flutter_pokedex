@@ -16,16 +16,18 @@ class PokemonDetailView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final pokemonAsync = ref.watch(pokemonDetailProvider(pokemonId));
-    final isFavorite = ref.watch(favoritesProvider).value?.contains(pokemonId) ?? false;
+    final isFavorite = ref.watch(favoritesProvider).contains(pokemonId);
 
     ref.listen(pokemonDetailProvider(pokemonId), (prev, next) {
-      next.whenData((_) => ref.read(historyProvider.notifier).add(pokemonId));
+      next.whenData((_) => ref.read(historyProvider).add(pokemonId));
     });
 
     return Scaffold(
       body: pokemonAsync.when(
         data: (pokemon) {
-          final primaryType = pokemon.types.isNotEmpty ? pokemon.types.first : null;
+          final primaryType = pokemon.types.isNotEmpty
+              ? pokemon.types.first
+              : null;
           final backgroundColor = primaryType != null
               ? primaryType.color.withAlpha(51)
               : Colors.grey.shade100;
@@ -39,7 +41,8 @@ class PokemonDetailView extends ConsumerWidget {
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
                   onPressed: () => context.pop(),
                 ),
-                backgroundColor: primaryType?.color ?? Theme.of(context).primaryColor,
+                backgroundColor:
+                    primaryType?.color ?? Theme.of(context).primaryColor,
                 flexibleSpace: FlexibleSpaceBar(
                   background: Container(
                     decoration: BoxDecoration(
@@ -72,8 +75,10 @@ class PokemonDetailView extends ConsumerWidget {
                       color: isFavorite ? Colors.red : Colors.white,
                     ),
                     onPressed: () {
-                    ref.read(toggleFavoriteProvider)(pokemon.id);
-                  },
+                      ref
+                          .read(favoritesProvider.notifier)
+                          .toggleFavorite(pokemon.id);
+                    },
                   ),
                 ],
               ),
@@ -88,13 +93,13 @@ class PokemonDetailView extends ConsumerWidget {
                           children: [
                             Text(
                               '#${pokemon.id.toString().padLeft(3, '0')}',
-                              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                    color: Colors.grey,
-                                  ),
+                              style: Theme.of(context).textTheme.labelLarge
+                                  ?.copyWith(color: Colors.grey),
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              pokemon.name[0].toUpperCase() + pokemon.name.substring(1),
+                              pokemon.name[0].toUpperCase() +
+                                  pokemon.name.substring(1),
                               style: Theme.of(context).textTheme.headlineMedium,
                             ),
                             const SizedBox(height: 12),
@@ -127,10 +132,12 @@ class PokemonDetailView extends ConsumerWidget {
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const SizedBox(height: 12),
-                      ...pokemon.stats.map((stat) => StatBar(
-                            stat: stat,
-                            color: primaryType?.color ?? Colors.grey,
-                          )),
+                      ...pokemon.stats.map(
+                        (stat) => StatBar(
+                          stat: stat,
+                          color: primaryType?.color ?? Colors.grey,
+                        ),
+                      ),
                       const SizedBox(height: 24),
                       Text(
                         'Abilities',
@@ -164,7 +171,8 @@ class PokemonDetailView extends ConsumerWidget {
             ],
           );
         },
-        loading: () => const LoadingIndicator(message: 'Loading Pokemon details...'),
+        loading: () =>
+            const LoadingIndicator(message: 'Loading Pokemon details...'),
         error: (error, _) => ErrorDisplay(
           message: error.toString(),
           onRetry: () => ref.invalidate(pokemonDetailProvider(pokemonId)),
@@ -186,15 +194,12 @@ class _InfoColumn extends StatelessWidget {
       children: [
         Text(
           label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Colors.grey,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(color: Colors.grey),
         ),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text(value, style: Theme.of(context).textTheme.titleMedium),
       ],
     );
   }
